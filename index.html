@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+    <title>Create Shipping Label · Memon & Sons</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* ----- RESET & BASE ----- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+            .splash-screen, .splash-screen .splash-content {
+                animation-duration: 0.01ms !important;
+            }
+        }
+
+        /* ----- SPLASH SCREEN ----- */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            animation: splashFadeOut 4s ease forwards;
+            pointer-events: none;
+        }
+
+        @keyframes splashFadeOut {
+            0% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
+        }
+
+        .splash-content {
+            text-align: center;
+            animation: splashContent 4s ease forwards;
+        }
+
+        @keyframes splashContent {
+            0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+            15% { opacity: 1; transform: scale(1) translateY(0); }
+            80% { opacity: 1; transform: scale(1) translateY(0); }
+            100% { opacity: 0; transform: scale(1.02) translateY(-8px); }
+        }
+
+        .splash-logo {
+            max-width: 270px;
+            width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto 16px;
+            filter: drop-shadow(0 4px 16px rgba(0,0,0,0.08));
+        }
+
+        .splash-welcome {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #0b1a33;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-top: 8px;
+        }
+
+        .splash-screen.hidden {
+            display: none;
+        }
+
+        /* ----- MAIN WEBSITE ----- */
+        .main-website {
+            opacity: 0;
+            animation: mainAppear 0.8s ease forwards;
+            animation-delay: 4.1s;
+        }
+
+        @keyframes mainAppear {
+            0% { opacity: 0; transform: translateY(12px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        body {
+            background: #eef4fa;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 16px;
+            margin: 0;
+        }
+
+        .card {
+            max-width: 640px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 32px;
+            box-shadow: 0 18px 40px rgba(11, 26, 51, 0.08);
+            padding: 32px 28px 20px;
+            transition: box-shadow 0.25s ease;
+        }
+
+        .logo-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 8px;
+            animation: logoEntrance 0.7s ease both;
+            animation-delay: 4.3s;
+            opacity: 0;
+        }
+
+        @keyframes logoEntrance {
+            0% { opacity: 0; transform: scale(0.90) translateY(15px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .logo-image {
+            max-width: 270px;
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 6px rgba(11,26,51,0.06));
+            transition: filter 0.5s ease;
+        }
+
+        .logo-image:hover {
+            filter: drop-shadow(0 4px 12px rgba(11,26,51,0.12));
+        }
+
+        .logo-fallback {
+            display: none;
+        }
+
+        .main-heading {
+            font-size: 2.0rem;
+            font-weight: 700;
+            color: #0b1a33;
+            letter-spacing: -0.4px;
+            margin-top: 6px;
+            margin-bottom: 2px;
+            text-align: center;
+            animation: headingSlide 0.6s ease both;
+            animation-delay: 4.5s;
+            opacity: 0;
+        }
+
+        @keyframes headingSlide {
+            0% { opacity: 0; transform: translateY(12px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .subhead {
+            font-size: 1rem;
+            color: #3b4d6b;
+            text-align: center;
+            margin-bottom: 28px;
+            font-weight: 400;
+            border-left: 4px solid #f5b342;
+            padding-left: 16px;
+            background: #f6faff;
+            border-radius: 0 16px 16px 0;
+            line-height: 1.4;
+            max-width: 90%;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 8px 14px;
+            animation: headingSlide 0.6s ease both;
+            animation-delay: 4.6s;
+            opacity: 0;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+            animation: fieldFadeUp 0.55s ease both;
+            opacity: 0;
+        }
+
+        .form-group:nth-child(1) { animation-delay: 4.7s; }
+        .form-group:nth-child(2) { animation-delay: 4.75s; }
+        .form-group:nth-child(3) { animation-delay: 4.80s; }
+        .form-group:nth-child(4) { animation-delay: 4.85s; }
+        .form-group:nth-child(5) { animation-delay: 4.90s; }
+        .form-group:nth-child(6) { animation-delay: 4.95s; }
+
+        @keyframes fieldFadeUp {
+            0% { opacity: 0; transform: translateY(14px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1f2a44;
+            margin-bottom: 5px;
+            letter-spacing: 0.2px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 1rem;
+            border: 1.5px solid #dce3ef;
+            border-radius: 16px;
+            background: #fafcff;
+            transition: border 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+            outline: none;
+            color: #0b1a33;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+            max-height: 220px;
+            line-height: 1.6;
+        }
+
+        textarea:focus {
+            border-color: #1a3a6b;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(26, 58, 107, 0.10);
+            transform: scale(1.01);
+        }
+
+        textarea.error {
+            border-color: #c72a2a;
+            background: #fff6f6;
+            animation: errorShake 0.3s ease;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 1rem;
+            border: 1.5px solid #dce3ef;
+            border-radius: 16px;
+            background: #fafcff;
+            transition: border 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+            outline: none;
+            color: #0b1a33;
+            -webkit-appearance: none;
+        }
+
+        input:focus {
+            border-color: #1a3a6b;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(26, 58, 107, 0.10);
+            transform: scale(1.01);
+        }
+
+        input.error {
+            border-color: #c72a2a;
+            background: #fff6f6;
+            animation: errorShake 0.3s ease;
+        }
+
+        @keyframes errorShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .error-message {
+            color: #c72a2a;
+            font-size: 0.8rem;
+            margin-top: 6px;
+            padding-left: 6px;
+            display: none;
+            font-weight: 500;
+            animation: errorFade 0.25s ease;
+        }
+
+        @keyframes errorFade {
+            0% { opacity: 0; transform: translateY(-4px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .actions {
+            margin-top: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            animation: btnAppear 0.6s ease both;
+            animation-delay: 5.0s;
+            opacity: 0;
+        }
+
+        @keyframes btnAppear {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px 18px;
+            border: none;
+            border-radius: 60px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: #0b1a33;
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+            text-align: center;
+            touch-action: manipulation;
+            box-shadow: 0 6px 14px rgba(11, 26, 51, 0.16);
+            letter-spacing: 0.3px;
+        }
+
+        .btn:hover {
+            background: #1a2d4a;
+            box-shadow: 0 10px 22px rgba(11, 26, 51, 0.20);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+            box-shadow: 0 3px 8px rgba(11, 26, 51, 0.12);
+        }
+
+        .btn-primary { background: #0b1a33; }
+        .btn-primary:hover { background: #1a2d4a; }
+
+        .btn-whatsapp {
+            background: #25D366;
+            box-shadow: 0 6px 14px rgba(37, 211, 102, 0.30);
+        }
+        .btn-whatsapp:hover {
+            background: #1da851;
+            box-shadow: 0 10px 22px rgba(37, 211, 102, 0.35);
+            transform: translateY(-2px);
+        }
+        .btn-whatsapp:active { transform: scale(0.97); }
+
+        .btn:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            filter: grayscale(0.3);
+            transform: none !important;
+        }
+
+        .btn.loading {
+            background: #3a4b66;
+            pointer-events: none;
+            position: relative;
+            color: transparent;
+        }
+        .btn.loading::after {
+            content: "⏳";
+            color: white;
+            font-size: 1.4rem;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .success-msg {
+            margin-top: 16px;
+            background: #e6f7ec;
+            border-radius: 30px;
+            padding: 12px 18px;
+            color: #0b4b2a;
+            font-weight: 500;
+            text-align: center;
+            border: 1px solid #b5e0c9;
+            display: none;
+            animation: successPop 0.4s ease;
+        }
+
+        @keyframes successPop {
+            0% { opacity: 0; transform: scale(0.92); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .success-msg.show { display: block; }
+
+        .footer {
+            margin-top: 28px;
+            padding-top: 18px;
+            border-top: 1.5px solid #eef4fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            animation: footerAppear 0.6s ease both;
+            animation-delay: 5.1s;
+            opacity: 0;
+        }
+
+        @keyframes footerAppear {
+            0% { opacity: 0; transform: translateY(8px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .footer-heading {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #0b1a33;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 28px;
+            flex-wrap: wrap;
+        }
+
+        .footer a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #1f2a44;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s ease, transform 0.15s ease;
+        }
+
+        .footer a:hover {
+            color: #0b1a33;
+            transform: translateY(-1px);
+        }
+
+        .footer a svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+            flex-shrink: 0;
+        }
+
+        .footer .divider {
+            width: 1px;
+            height: 28px;
+            background: #dce3ef;
+        }
+
+        @media (max-width: 480px) {
+            .card { padding: 22px 16px 18px; border-radius: 24px; }
+            .main-heading { font-size: 1.7rem; }
+            .row-2 { grid-template-columns: 1fr; gap: 0; }
+            .btn { padding: 18px; font-size: 1rem; }
+            input, textarea { padding: 15px 14px; }
+            textarea { min-height: 80px; max-height: 180px; }
+            .subhead { max-width: 100%; font-size: 0.95rem; }
+            .logo-image, .splash-logo { max-width: 200px; }
+            .splash-welcome { font-size: 1.4rem; }
+            .footer-links { gap: 16px; }
+            .footer a { font-size: 0.85rem; }
+            .footer .divider { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="splash-screen" id="splashScreen">
+        <div class="splash-content">
+            <img src="Image/file_0000000043848211bfabab43cb024619.png" alt="Memon & Sons logo" class="splash-logo" />
+            <div class="splash-welcome">Welcome To Memon & Sons</div>
+        </div>
+    </div>
+
+    <div class="main-website">
+        <div class="card" role="main">
+            <div class="logo-wrapper">
+                <img src="Image/file_0000000043848211bfabab43cb024619.png" alt="Memon & Sons logo" class="logo-image" />
+                <span class="logo-fallback">Memon &amp; Sons</span>
+            </div>
+
+            <h1 class="main-heading">Create Shipping Label</h1>
+            <div class="subhead">Enter delivery details to create your shipping label</div>
+
+            <form id="shippingForm" novalidate>
+                <div class="form-group">
+                    <label for="fullName">FULL NAME *</label>
+                    <input type="text" id="fullName" placeholder="Enter full name" required />
+                    <div class="error-message" id="fullNameError">Full name is required.</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="address">ADDRESS *</label>
+                    <textarea id="address" placeholder="Street, building, landmark" rows="3" required></textarea>
+                    <div class="error-message" id="addressError">Address is required.</div>
+                </div>
+
+                <div class="row-2">
+                    <div class="form-group">
+                        <label for="city">CITY *</label>
+                        <input type="text" id="city" placeholder="e.g. Surat" required />
+                        <div class="error-message" id="cityError">City is required.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="state">STATE *</label>
+                        <input type="text" id="state" placeholder="e.g. Gujarat" required />
+                        <div class="error-message" id="stateError">State is required.</div>
+                    </div>
+                </div>
+
+                <div class="row-2">
+                    <div class="form-group">
+                        <label for="pin">PIN CODE *</label>
+                        <input type="text" id="pin" placeholder="6-digit PIN code" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" required />
+                        <div class="error-message" id="pinError">Enter a valid 6-digit PIN.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="mobile">NUMBER *</label>
+                        <input type="tel" id="mobile" placeholder="10-digit mobile number" maxlength="10" inputmode="numeric" pattern="[0-9]{10}" required />
+                        <div class="error-message" id="mobileError">Enter a valid 10-digit mobile number.</div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary" id="generateBtn">Create Shipping Label</button>
+                    <button type="button" class="btn btn-whatsapp" id="whatsappBtn" disabled>Send on WhatsApp</button>
+                </div>
+            </form>
+
+            <div class="success-msg" id="successMsg">✅ Shipping label created successfully!</div>
+
+            <div class="footer">
+                <div class="footer-heading">FOLLOW FOR MORE UPDATES</div>
+                <div class="footer-links">
+                    <a href="https://instagram.com/memon_and_sons" target="_blank" rel="noopener noreferrer">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="2" y="2" width="20" height="20" rx="6" fill="none" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="18" cy="6" r="1.5" fill="currentColor"/>
+                        </svg>
+                        @memon_and_sons
+                    </a>
+                    <span class="divider"></span>
+                    <a href="https://facebook.com/memonandsons" target="_blank" rel="noopener noreferrer">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="currentColor"/>
+                        </svg>
+                        @memonandsons
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            "use strict";
+
+            const SHIP_FROM = {
+                name: "Usman Kapadia",
+                address: "Shop no.10/2571 MEMON AND SONS",
+                address2: "Bhagatal ao Main Road Surat 395003",
+                mobile: "+91 94095 41100"
+            };
+
+            const WHATSAPP_NUMBER = "919409541100";
+
+            const form = document.getElementById('shippingForm');
+            const fullName = document.getElementById('fullName');
+            const address = document.getElementById('address');
+            const city = document.getElementById('city');
+            const state = document.getElementById('state');
+            const pin = document.getElementById('pin');
+            const mobile = document.getElementById('mobile');
+
+            const fullNameErr = document.getElementById('fullNameError');
+            const addressErr = document.getElementById('addressError');
+            const cityErr = document.getElementById('cityError');
+            const stateErr = document.getElementById('stateError');
+            const pinErr = document.getElementById('pinError');
+            const mobileErr = document.getElementById('mobileError');
+
+            const generateBtn = document.getElementById('generateBtn');
+            const whatsappBtn = document.getElementById('whatsappBtn');
+            const successMsg = document.getElementById('successMsg');
+
+            let pdfBlob = null;
+            let pdfFile = null;
+            let pdfDataUrl = null;
+
+            function validateField(input, errorEl, condition, message) {
+                if (!condition) {
+                    input.classList.add('error');
+                    errorEl.textContent = message;
+                    errorEl.classList.add('show');
+                    return false;
+                } else {
+                    input.classList.remove('error');
+                    errorEl.classList.remove('show');
+                    return true;
+                }
+            }
+
+            function validatePin(value) { return /^[0-9]{6}$/.test(value); }
+            function validateMobile(value) { return /^[0-9]{10}$/.test(value); }
+
+            function validateAll() {
+                const nameValid = validateField(fullName, fullNameErr, fullName.value.trim().length > 0, 'Full name is required.');
+                const addrValid = validateField(address, addressErr, address.value.trim().length > 0, 'Address is required.');
+                const cityValid = validateField(city, cityErr, city.value.trim().length > 0, 'City is required.');
+                const stateValid = validateField(state, stateErr, state.value.trim().length > 0, 'State is required.');
+                const pinValid = validateField(pin, pinErr, validatePin(pin.value.trim()), 'Enter a valid 6-digit PIN.');
+                const mobileValid = validateField(mobile, mobileErr, validateMobile(mobile.value.trim()), 'Enter a valid 10-digit mobile number.');
+                return nameValid && addrValid && cityValid && stateValid && pinValid && mobileValid;
+            }
+
+            function attachBlurValidation() {
+                const fields = [
+                    { el: fullName, err: fullNameErr, validator: (v) => v.trim().length > 0, msg: 'Full name is required.' },
+                    { el: address, err: addressErr, validator: (v) => v.trim().length > 0, msg: 'Address is required.' },
+                    { el: city, err: cityErr, validator: (v) => v.trim().length > 0, msg: 'City is required.' },
+                    { el: state, err: stateErr, validator: (v) => v.trim().length > 0, msg: 'State is required.' },
+                    { el: pin, err: pinErr, validator: (v) => validatePin(v.trim()), msg: 'Enter a valid 6-digit PIN.' },
+                    { el: mobile, err: mobileErr, validator: (v) => validateMobile(v.trim()), msg: 'Enter a valid 10-digit mobile number.' },
+                ];
+                fields.forEach(({ el, err, validator, msg }) => {
+                    el.addEventListener('blur', function() {
+                        validateField(this, err, validator(this.value), msg);
+                    });
+                    el.addEventListener('input', function() {
+                        if (this.classList.contains('error') && validator(this.value)) {
+                            this.classList.remove('error');
+                            err.classList.remove('show');
+                        }
+                    });
+                });
+            }
+            attachBlurValidation();
+
+            // Dynamic Font & Height Adjustment PDF Generation
+            function generatePDF() {
+                const name = fullName.value.trim();
+                const addr = address.value.trim();
+                const cityVal = city.value.trim();
+                const stateVal = state.value.trim();
+                const pinVal = pin.value.trim();
+                const mobileVal = mobile.value.trim();
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+                const margin = 20;
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const maxWidth = pageWidth - (margin * 2);
+
+                const shipToLines = [
+                    `Ship To:- ${name}`,
+                    `ADDRESS:- ${addr}`,
+                    `CITY - ${cityVal}`,
+                    `STATE- ${stateVal}`,
+                    `PIN CODE - ${pinVal}`,
+                    `NUMBER - +91 ${mobileVal}`
+                ];
+
+                const shipFromLines = [
+                    `Ship from:- ${SHIP_FROM.name}`,
+                    SHIP_FROM.address,
+                    SHIP_FROM.address2,
+                    `Mob no. ${SHIP_FROM.mobile}`
+                ];
+
+                let fontSize = 32;
+                let lineHeight = 16;
+                const maxAllowedHeight = pageHeight - 45;
+
+                doc.setFont('helvetica', 'bold');
+
+                while (fontSize > 12) {
+                    doc.setFontSize(fontSize);
+                    lineHeight = fontSize * 0.52;
+                    let totalH = 20;
+
+                    shipToLines.forEach(text => {
+                        const split = doc.splitTextToSize(text, maxWidth);
+                        totalH += split.length * lineHeight;
+                    });
+
+                    totalH += 20;
+
+                    shipFromLines.forEach(text => {
+                        const split = doc.splitTextToSize(text, maxWidth);
+                        totalH += split.length * lineHeight;
+                    });
+
+                    if (totalH <= maxAllowedHeight) {
+                        break;
+                    }
+                    fontSize -= 1;
+                }
+
+                doc.setFontSize(fontSize);
+                let y = 25;
+
+                shipToLines.forEach((text) => {
+                    const splitText = doc.splitTextToSize(text, maxWidth);
+                    doc.text(splitText, margin, y);
+                    y += lineHeight * splitText.length;
+                });
+
+                y += 6;
+                doc.setLineWidth(1.4);
+                doc.setDrawColor(40, 40, 40);
+                doc.line(margin, y, pageWidth - margin, y);
+                y += 18;
+
+                shipFromLines.forEach(text => {
+                    const splitText = doc.splitTextToSize(text, maxWidth);
+                    doc.text(splitText, margin, y);
+                    y += lineHeight * splitText.length;
+                });
+
+                const pdfOutput = doc.output('blob');
+                pdfBlob = pdfOutput;
+                pdfDataUrl = URL.createObjectURL(pdfOutput);
+                pdfFile = new File([pdfBlob], 'shipping_label.pdf', { type: 'application/pdf' });
+
+                whatsappBtn.disabled = false;
+                successMsg.classList.add('show');
+                setTimeout(() => { successMsg.classList.remove('show'); }, 4000);
+            }
+
+            function shareViaWhatsApp() {
+                if (!pdfFile) {
+                    alert('Please generate the shipping label first.');
+                    return;
+                }
+
+                const waUrl = `https://wa.me/${WHATSAPP_NUMBER}`;
+
+                if (navigator.share && navigator.canShare) {
+                    const shareData = {
+                        files: [pdfFile],
+                        title: 'Shipping Label',
+                        text: 'Shipping Label for +91 94095 41100',
+                    };
+                    if (navigator.canShare(shareData)) {
+                        navigator.share(shareData)
+                            .then(() => {
+                                window.open(waUrl, '_blank');
+                            })
+                            .catch((err) => {
+                                if (err.name !== 'AbortError') fallbackShare();
+                            });
+                        return;
+                    }
+                }
+                fallbackShare();
+            }
+
+            function fallbackShare() {
+                if (pdfBlob) {
+                    const link = document.createElement('a');
+                    link.href = pdfDataUrl;
+                    link.download = 'shipping_label.pdf';
+                    link.click();
+                }
+                window.open(`https://wa.me/${WHATSAPP_NUMBER}`, '_blank');
+            }
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                if (!validateAll()) {
+                    const firstError = document.querySelector('.error');
+                    if (firstError) firstError.focus();
+                    return;
+                }
+
+                generateBtn.classList.add('loading');
+                generateBtn.disabled = true;
+
+                setTimeout(() => {
+                    generatePDF();
+                    generateBtn.classList.remove('loading');
+                    generateBtn.disabled = false;
+                }, 300);
+            });
+
+            whatsappBtn.addEventListener('click', function() {
+                if (this.disabled) return;
+                shareViaWhatsApp();
+            });
+
+            console.log('Memon & Sons Shipping Label ready.');
+        })();
+    </script>
+</body>
+</html>
