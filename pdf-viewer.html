@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+    <title>PDF Viewer · Memon & Sons</title>
+    
+    <!-- PDF.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ----- HEADER ----- */
+        .viewer-header {
+            background: #0b1a33;
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+        }
+
+        .viewer-header .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .viewer-header .brand img {
+            height: 36px;
+            width: auto;
+        }
+
+        .viewer-header .brand h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .viewer-header .brand small {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            font-weight: 400;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .header-actions .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+            color: white;
+            background: rgba(255,255,255,0.15);
+        }
+
+        .header-actions .btn:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-1px);
+        }
+
+        .header-actions .btn:active {
+            transform: scale(0.96);
+        }
+
+        .header-actions .btn-primary {
+            background: #25D366;
+            color: white;
+        }
+        .header-actions .btn-primary:hover {
+            background: #1da851;
+        }
+
+        .header-actions .btn-download {
+            background: #2d7a3a;
+        }
+        .header-actions .btn-download:hover {
+            background: #23662e;
+        }
+
+        .header-actions .btn-print {
+            background: #1a5a7a;
+        }
+        .header-actions .btn-print:hover {
+            background: #134a64;
+        }
+
+        /* ----- TOOLBAR ----- */
+        .toolbar {
+            background: white;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #e4e7ec;
+            position: sticky;
+            top: 72px;
+            z-index: 99;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toolbar .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            touch-action: manipulation;
+            background: #f0f2f5;
+            color: #1f2a44;
+        }
+
+        .toolbar .btn:hover {
+            background: #e4e7ec;
+        }
+
+        .toolbar .btn:active {
+            transform: scale(0.94);
+        }
+
+        .toolbar .btn-icon {
+            font-size: 1.1rem;
+            padding: 4px 10px;
+        }
+
+        .toolbar .page-info {
+            font-size: 0.85rem;
+            color: #1f2a44;
+            font-weight: 500;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .toolbar .zoom-info {
+            font-size: 0.8rem;
+            color: #3b4d6b;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        /* ----- VIEWER CONTAINER ----- */
+        .viewer-container {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            background: #e8ecf1;
+            min-height: calc(100vh - 160px);
+            position: relative;
+        }
+
+        .pdf-wrapper {
+            background: white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 100%;
+            overflow: auto;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .pdf-wrapper canvas {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            height: auto !important;
+            transition: all 0.2s ease;
+        }
+
+        /* ----- LOADING ----- */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            gap: 20px;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #e4e7ec;
+            border-top-color: #0b1a33;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1rem;
+            color: #3b4d6b;
+        }
+
+        /* ----- ERROR ----- */
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            gap: 16px;
+            text-align: center;
+        }
+
+        .error-container .error-icon {
+            font-size: 4rem;
+        }
+
+        .error-container .error-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #0b1a33;
+        }
+
+        .error-container .error-desc {
+            font-size: 1rem;
+            color: #3b4d6b;
+            max-width: 500px;
+        }
+
+        .error-container .btn {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: #0b1a33;
+            color: white;
+            transition: all 0.2s ease;
+        }
+
+        .error-container .btn:hover {
+            background: #1a2d4a;
+            transform: translateY(-2px);
+        }
+
+        /* ----- RESPONSIVE ----- */
+        @media (max-width: 768px) {
+            .viewer-header {
+                padding: 12px 16px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .viewer-header .brand h1 {
+                font-size: 1rem;
+            }
+
+            .header-actions {
+                justify-content: center;
+            }
+
+            .header-actions .btn {
+                padding: 6px 12px;
+                font-size: 0.75rem;
+            }
+
+            .toolbar {
+                padding: 8px 12px;
+                gap: 8px;
+                top: 100px;
+                flex-wrap: wrap;
+            }
+
+            .toolbar .btn {
+                padding: 4px 10px;
+                font-size: 0.75rem;
+            }
+
+            .toolbar .page-info {
+                font-size: 0.75rem;
+                min-width: 60px;
+            }
+
+            .viewer-container {
+                padding: 12px;
+                min-height: calc(100vh - 200px);
+            }
+
+            .pdf-wrapper {
+                padding: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .viewer-header .brand img {
+                height: 28px;
+            }
+
+            .header-actions .btn {
+                padding: 4px 10px;
+                font-size: 0.7rem;
+            }
+
+            .toolbar {
+                top: 92px;
+                padding: 6px 8px;
+                gap: 4px;
+            }
+
+            .toolbar-group {
+                gap: 4px;
+            }
+
+            .toolbar .btn {
+                padding: 4px 8px;
+                font-size: 0.7rem;
+            }
+
+            .toolbar .page-info {
+                font-size: 0.7rem;
+                min-width: 50px;
+            }
+
+            .pdf-wrapper {
+                padding: 8px;
+            }
+        }
+
+        /* ----- PRINT STYLES ----- */
+        @media print {
+            .viewer-header, .toolbar {
+                display: none !important;
+            }
+
+            .viewer-container {
+                padding: 0 !important;
+                background: white !important;
+                min-height: auto !important;
+            }
+
+            .pdf-wrapper {
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                padding: 0 !important;
+            }
+
+            .pdf-wrapper canvas {
+                max-width: 100% !important;
+                page-break-after: always;
+            }
+
+            body {
+                background: white !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="viewer-header">
+        <div class="brand">
+            <img src="Image/file_0000000043848211bfabab43cb024619.png" alt="Memon & Sons" />
+            <div>
+                <h1>PDF Viewer <small>· Memon & Sons</small></h1>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-download" id="downloadBtn">⬇️ Download</button>
+            <button class="btn btn-print" id="printBtn">🖨️ Print</button>
+            <button class="btn btn-primary" id="whatsappBtn">💬 WhatsApp</button>
+            <button class="btn" id="backBtn">← Back</button>
+        </div>
+    </header>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar" id="toolbar">
+        <div class="toolbar-group">
+            <button class="btn btn-icon" id="prevBtn" title="Previous Page">◀</button>
+            <span class="page-info" id="pageInfo">Page 1 / 1</span>
+            <button class="btn btn-icon" id="nextBtn" title="Next Page">▶</button>
+        </div>
+        <div class="toolbar-group">
+            <button class="btn btn-icon" id="zoomOutBtn" title="Zoom Out">🔍−</button>
+            <span class="zoom-info" id="zoomInfo">100%</span>
+            <button class="btn btn-icon" id="zoomInBtn" title="Zoom In">🔍+</button>
+            <button class="btn" id="fitBtn" title="Fit to Screen">⊡ Fit</button>
+            <button class="btn" id="fullscreenBtn" title="Fullscreen">⛶ Full</button>
+        </div>
+    </div>
+
+    <!-- VIEWER -->
+    <div class="viewer-container" id="viewerContainer">
+        <div class="pdf-wrapper" id="pdfWrapper">
+            <div id="loadingContainer" class="loading-container">
+                <div class="spinner"></div>
+                <div class="loading-text">Loading PDF...</div>
+            </div>
+            <div id="errorContainer" class="error-container" style="display:none;">
+                <div class="error-icon">📄</div>
+                <div class="error-title">Failed to Load PDF</div>
+                <div class="error-desc" id="errorDesc">The PDF could not be loaded. Please try again.</div>
+                <button class="btn" onclick="window.location.reload()">↻ Retry</button>
+            </div>
+            <div id="pdfContent" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            "use strict";
+
+            // ============ CONSTANTS ============
+            const SITE_BASE_URL = "https://shippinglabel.github.io/memonandsons/";
+            const WHATSAPP_NUMBER = "919409541100";
+
+            // ============ DOM ELEMENTS ============
+            const viewerContainer = document.getElementById('viewerContainer');
+            const pdfWrapper = document.getElementById('pdfWrapper');
+            const loadingContainer = document.getElementById('loadingContainer');
+            const errorContainer = document.getElementById('errorContainer');
+            const errorDesc = document.getElementById('errorDesc');
+            const pdfContent = document.getElementById('pdfContent');
+
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const pageInfo = document.getElementById('pageInfo');
+            const zoomInBtn = document.getElementById('zoomInBtn');
+            const zoomOutBtn = document.getElementById('zoomOutBtn');
+            const zoomInfo = document.getElementById('zoomInfo');
+            const fitBtn = document.getElementById('fitBtn');
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const printBtn = document.getElementById('printBtn');
+            const whatsappBtn = document.getElementById('whatsappBtn');
+            const backBtn = document.getElementById('backBtn');
+
+            // ============ STATE ============
+            let pdfDoc = null;
+            let currentPage = 1;
+            let totalPages = 0;
+            let currentScale = 1.0;
+            let baseScale = 1.0;
+            let isFullscreen = false;
+            let pdfData = null;
+
+            // ============ EXTRACT DATA FROM URL ============
+            function getPDFDataFromURL() {
+                try {
+                    const params = new URLSearchParams(window.location.search);
+                    const encodedData = params.get('data');
+                    
+                    if (!encodedData) {
+                        throw new Error('No PDF data provided in URL.');
+                    }
+
+                    // Decode the data
+                    const decodedData = decodeURIComponent(encodedData);
+                    
+                    // Check if it looks like base64
+                    if (!decodedData || decodedData.length < 10) {
+                        throw new Error('Invalid PDF data format.');
+                    }
+
+                    return decodedData;
+                } catch (error) {
+                    console.error('Error extracting PDF data:', error);
+                    return null;
+                }
+            }
+
+            // ============ LOAD PDF ============
+            async function loadPDF() {
+                try {
+                    // Show loading
+                    loadingContainer.style.display = 'flex';
+                    errorContainer.style.display = 'none';
+                    pdfContent.style.display = 'none';
+
+                    // Get data from URL
+                    pdfData = getPDFDataFromURL();
+                    
+                    if (!pdfData) {
+                        throw new Error('No PDF data found in URL.');
+                    }
+
+                    // Decode base64 to Uint8Array
+                    const binaryString = atob(pdfData);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+
+                    // Load PDF using PDF.js
+                    const loadingTask = pdfjsLib.getDocument({ data: bytes });
+                    pdfDoc = await loadingTask.promise;
+                    
+                    totalPages = pdfDoc.numPages;
+                    
+                    if (totalPages === 0) {
+                        throw new Error('PDF has no pages.');
+                    }
+
+                    // Hide loading, show content
+                    loadingContainer.style.display = 'none';
+                    pdfContent.style.display = 'block';
+
+                    // Render first page
+                    currentPage = 1;
+                    await renderPage(currentPage);
+
+                    // Update UI
+                    updateToolbar();
+
+                } catch (error) {
+                    console.error('PDF Load Error:', error);
+                    loadingContainer.style.display = 'none';
+                    errorContainer.style.display = 'flex';
+                    errorDesc.textContent = error.message || 'Failed to load PDF. Please ensure the data is valid.';
+                }
+            }
+
+            // ============ RENDER PAGE ============
+            async function renderPage(pageNumber) {
+                if (!pdfDoc) return;
+
+                try {
+                    const page = await pdfDoc.getPage(pageNumber);
+                    
+                    // Calculate scale to fit width
+                    const containerWidth = pdfWrapper.clientWidth - 40;
+                    const viewport = page.getViewport({ scale: 1 });
+                    const scale = Math.min(
+                        currentScale,
+                        (containerWidth / viewport.width) * 0.95
+                    );
+                    
+                    const scaledViewport = page.getViewport({ scale: Math.max(scale, 0.25) });
+                    
+                    // Create or get canvas
+                    let canvas = pdfContent.querySelector('canvas');
+                    if (!canvas) {
+                        canvas = document.createElement('canvas');
+                        pdfContent.appendChild(canvas);
+                    }
+                    
+                    // Set canvas size
+                    canvas.width = scaledViewport.width;
+                    canvas.height = scaledViewport.height;
+                    canvas.style.width = scaledViewport.width + 'px';
+                    canvas.style.height = scaledViewport.height + 'px';
+                    
+                    // Render
+                    const context = canvas.getContext('2d');
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: scaledViewport
+                    };
+                    
+                    await page.render(renderContext).promise;
+                    
+                    // Update scale info
+                    zoomInfo.textContent = Math.round(scale * 100) + '%';
+                    currentScale = scale;
+                    
+                } catch (error) {
+                    console.error('Render error:', error);
+                    throw new Error('Failed to render page: ' + error.message);
+                }
+            }
+
+            // ============ UPDATE TOOLBAR ============
+            function updateToolbar() {
+                pageInfo.textContent = `Page ${currentPage} / ${totalPages}`;
+                prevBtn.disabled = currentPage <= 1;
+                nextBtn.disabled = currentPage >= totalPages;
+            }
+
+            // ============ NAVIGATION ============
+            async function goToPage(pageNumber) {
+                if (pageNumber < 1 || pageNumber > totalPages) return;
+                currentPage = pageNumber;
+                await renderPage(currentPage);
+                updateToolbar();
+            }
+
+            async function nextPage() {
+                if (currentPage < totalPages) {
+                    await goToPage(currentPage + 1);
+                }
+            }
+
+            async function prevPage() {
+                if (currentPage > 1) {
+                    await goToPage(currentPage - 1);
+                }
+            }
+
+            // ============ ZOOM ============
+            async function zoomIn() {
+                currentScale = Math.min(currentScale * 1.2, 3.0);
+                await renderPage(currentPage);
+            }
+
+            async function zoomOut() {
+                currentScale = Math.max(currentScale / 1.2, 0.25);
+                await renderPage(currentPage);
+            }
+
+            async function fitToScreen() {
+                const containerWidth = pdfWrapper.clientWidth - 40;
+                if (pdfDoc) {
+                    const page = await pdfDoc.getPage(currentPage);
+                    const viewport = page.getViewport({ scale: 1 });
+                    currentScale = Math.min(containerWidth / viewport.width, 1.5);
+                    await renderPage(currentPage);
+                }
+            }
+
+            // ============ FULLSCREEN ============
+            function toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.log('Fullscreen error:', err);
+                    });
+                } else {
+                    document.exitFullscreen().catch(err => {
+                        console.log('Exit fullscreen error:', err);
+                    });
+                }
+            }
+
+            // ============ DOWNLOAD PDF ============
+            function downloadPDF() {
+                if (!pdfData) {
+                    showError('No PDF data available.');
+                    return;
+                }
+
+                try {
+                    // Create blob from base64
+                    const byteCharacters = atob(pdfData);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: 'application/pdf' });
+                    
+                    // Download
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'shipping_label.pdf';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Cleanup
+                    setTimeout(() => URL.revokeObjectURL(link.href), 100);
+                } catch (error) {
+                    console.error('Download error:', error);
+                    alert('Failed to download PDF. Please try again.');
+                }
+            }
+
+            // ============ PRINT PDF ============
+            function printPDF() {
+                if (!pdfData) {
+                    alert('No PDF data available to print.');
+                    return;
+                }
+
+                try {
+                    // Create blob from base64
+                    const byteCharacters = atob(pdfData);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: 'application/pdf' });
+                    
+                    // Create object URL
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Open in new window for printing
+                    const printWindow = window.open(url, '_blank');
+                    if (!printWindow) {
+                        // Fallback: Create iframe
+                        const iframe = document.createElement('iframe');
+                        iframe.style.display = 'none';
+                        iframe.src = url;
+                        document.body.appendChild(iframe);
+                        
+                        iframe.onload = function() {
+                            try {
+                                iframe.contentWindow.print();
+                            } catch (e) {
+                                console.error('Print error:', e);
+                                // Alternative: Use PDF.js print
+                                printWithPDFJS();
+                            }
+                        };
+                    }
+                    
+                    // Cleanup after some time
+                    setTimeout(() => URL.revokeObjectURL(url), 60000);
+                } catch (error) {
+                    console.error('Print error:', error);
+                    // Fallback to PDF.js print
+                    printWithPDFJS();
+                }
+            }
+
+            // ============ PRINT WITH PDF.JS ============
+            function printWithPDFJS() {
+                if (!pdfDoc) {
+                    alert('PDF document not loaded. Please wait and try again.');
+                    return;
+                }
+
+                try {
+                    // Use PDF.js print functionality
+                    const printContainer = document.createElement('div');
+                    printContainer.style.display = 'none';
+                    document.body.appendChild(printContainer);
+                    
+                    // Render all pages for printing
+                    let printPromises = [];
+                    for (let i = 1; i <= totalPages; i++) {
+                        printPromises.push(pdfDoc.getPage(i).then(page => {
+                            const viewport = page.getViewport({ scale: 1.5 });
+                            const canvas = document.createElement('canvas');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            printContainer.appendChild(canvas);
+                            
+                            return page.render({
+                                canvasContext: canvas.getContext('2d'),
+                                viewport: viewport
+                            }).promise;
+                        }));
+                    }
+                    
+                    Promise.all(printPromises).then(() => {
+                        // All pages rendered, print
+                        window.print();
+                        setTimeout(() => {
+                            document.body.removeChild(printContainer);
+                        }, 1000);
+                    }).catch(err => {
+                        console.error('Print render error:', err);
+                        alert('Failed to prepare PDF for printing. Please try downloading first.');
+                    });
+                } catch (error) {
+                    console.error('Print error:', error);
+                    alert('Failed to print PDF. Please download and print manually.');
+                }
+            }
+
+            // ============ SHARE ON WHATSAPP ============
+            function shareWhatsApp() {
+                try {
+                    // Get current URL with data
+                    const currentUrl = window.location.href;
+                    
+                    // For WhatsApp, share the viewer link
+                    const message = `📄 PDF Document\n\nView it here: ${currentUrl}`;
+                    const encodedMessage = encodeURIComponent(message);
+                    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`;
+                    
+                    window.open(waUrl, '_blank');
+                } catch (error) {
+                    console.error('WhatsApp share error:', error);
+                    alert('Failed to open WhatsApp. Please share the URL manually.');
+                }
+            }
+
+            // ============ GO BACK ============
+            function goBack() {
+                if (document.referrer) {
+                    window.history.back();
+                } else {
+                    window.location.href = SITE_BASE_URL;
+                }
+            }
+
+            // ============ SHOW ERROR ============
+            function showError(message) {
+                errorContainer.style.display = 'flex';
+                errorDesc.textContent = message;
+                loadingContainer.style.display = 'none';
+                pdfContent.style.display = 'none';
+            }
+
+            // ============ KEYBOARD SHORTCUTS ============
+            document.addEventListener('keydown', function(e) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                
+                switch(e.key) {
+                    case 'ArrowRight':
+                    case 'PageDown':
+                        e.preventDefault();
+                        nextPage();
+                        break;
+                    case 'ArrowLeft':
+                    case 'PageUp':
+                        e.preventDefault();
+                        prevPage();
+                        break;
+                    case 'Home':
+                        e.preventDefault();
+                        goToPage(1);
+                        break;
+                    case 'End':
+                        e.preventDefault();
+                        goToPage(totalPages);
+                        break;
+                    case '+':
+                    case '=':
+                        e.preventDefault();
+                        zoomIn();
+                        break;
+                    case '-':
+                        e.preventDefault();
+                        zoomOut();
+                        break;
+                    case 'f':
+                    case 'F':
+                        if (e.ctrlKey || e.metaKey) return;
+                        e.preventDefault();
+                        fitToScreen();
+                        break;
+                    case 'p':
+                    case 'P':
+                        if (!e.ctrlKey && !e.metaKey) {
+                            e.preventDefault();
+                            printPDF();
+                        }
+                        break;
+                }
+            });
+
+            // ============ EVENT LISTENERS ============
+            prevBtn.addEventListener('click', prevPage);
+            nextBtn.addEventListener('click', nextPage);
+            zoomInBtn.addEventListener('click', zoomIn);
+            zoomOutBtn.addEventListener('click', zoomOut);
+            fitBtn.addEventListener('click', fitToScreen);
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+            downloadBtn.addEventListener('click', downloadPDF);
+            printBtn.addEventListener('click', printPDF);
+            whatsappBtn.addEventListener('click', shareWhatsApp);
+            backBtn.addEventListener('click', goBack);
+
+            // Fullscreen change event
+            document.addEventListener('fullscreenchange', function() {
+                isFullscreen = !!document.fullscreenElement;
+                fullscreenBtn.textContent = isFullscreen ? '⛶ Exit' : '⛶ Full';
+            });
+
+            // Window resize
+            let resizeTimeout;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    if (pdfDoc && pdfContent.style.display !== 'none') {
+                        renderPage(currentPage);
+                    }
+                }, 300);
+            });
+
+            // ============ INIT ============
+            console.log('📄 Memon & Sons PDF Viewer (Firebase-free)');
+            console.log('🔗 Site Base URL:', SITE_BASE_URL);
+            console.log('📱 WhatsApp Number:', WHATSAPP_NUMBER);
+
+            // Load PDF
+            loadPDF();
+
+        })();
+    </script>
+</body>
+</html>
